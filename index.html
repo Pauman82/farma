@@ -1,0 +1,261 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmaPro - Dashboard TES</title>
+    <style>
+        :root {
+            --bg-dark: #12181f;
+            --card-bg: #1e252d;
+            --tes-blue: #00a8ff;
+            --tes-orange: #ff6b00;
+            --text-main: #e0e6ed;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 2px 2px, #1e293b 1px, transparent 0);
+            background-size: 40px 40px;
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            margin: 0;
+            background: linear-gradient(to right, var(--tes-blue), var(--tes-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        header p {
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        .search-section {
+            background: rgba(30, 37, 45, 0.8);
+            padding: 10px;
+            border-radius: 15px;
+            display: flex;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 40px;
+        }
+
+        input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 15px 20px;
+            color: white;
+            font-size: 1.1rem;
+            outline: none;
+        }
+
+        button {
+            background: var(--tes-orange);
+            color: white;
+            border: none;
+            padding: 0 40px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            box-shadow: 0 0 20px rgba(255, 107, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        #results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .card:nth-child(odd) { border-top: 4px solid var(--tes-orange); }
+        .card:nth-child(even) { border-top: 4px solid var(--tes-blue); }
+
+        .card h2 {
+            margin: 0 0 15px 0;
+            font-size: 1.4rem;
+            color: #fff;
+        }
+
+        .info-block { margin-bottom: 12px; }
+
+        .label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--tes-blue);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .value { font-size: 0.95rem; line-height: 1.4; color: var(--text-main); }
+
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: var(--text-dim);
+            padding: 40px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>FarmaPro</h1>
+        <p>Dashboard de Emergencias Sanitarias</p>
+    </header>
+
+    <div class="search-section">
+        <input type="text" id="searchInput" placeholder="Escribe un fármaco..." autocomplete="off">
+        <button onclick="buscar()">BUSCAR</button>
+    </div>
+
+    <div id="results"></div>
+</div>
+
+<script>
+    const db = [
+        // ANALGÉSICOS
+        { n: "Paracetamol", p: "Paracetamol", u: "Analgésico/Antipirético", c: "Fiebre, dolor leve" },
+        { n: "Nolotil", p: "Metamizol", u: "Analgésico/Espasmolítico", c: "Dolor agudo, cólicos" },
+        { n: "Ibuprofeno", p: "Ibuprofeno", u: "AINE", c: "Inflamación, dolor moderado" },
+        { n: "Enantyum", p: "Dexketoprofeno", u: "AINE rápido", c: "Dolor traumático agudo" },
+        { n: "Voltarén", p: "Diclofenaco", u: "AINE potente", c: "Cólico nefrítico, dolor articular" },
+        { n: "Adiro 100", p: "Ácido Acetilsalicílico", u: "Antiagregante", c: "Prevención IAM/ICTUS" },
+        { n: "Tramadol", p: "Tramadol", u: "Opioide menor", c: "Dolor severo" },
+        { n: "Ventolín", p: "Salbutamol", u: "Broncodilatador", c: "Crisis asma, EPOC" },
+        { n: "Urbason", p: "Metilprednisolona", u: "Corticoide", c: "Reacción alérgica, broncoespasmo" },
+        { n: "Seguril", p: "Furosemida", u: "Diurético", c: "Edema agudo pulmón, ICC" },
+        { n: "Cafinitrina", p: "Nitroglicerina", u: "Vasodilatador", c: "Angina de pecho (IAM)" },
+        { n: "Orfidal", p: "Lorazepam", u: "Benzodiacepina", c: "Ansiedad, crisis pánico" },
+        { n: "Valium", p: "Diazepam", u: "Relax. Muscular/Sedante", c: "Convulsiones, ansiedad" },
+        { n: "Sintrom", p: "Acenocumarol", u: "Anticoagulante", c: "Arritmias, riesgo trombosis" },
+        { n: "Eutirox", p: "Levotiroxina", u: "Hormona", c: "Hipotiroidismo" },
+        { n: "Omeprazol", p: "Omeprazol", u: "Protector gástrico", c: "Gastritis, úlcera" },
+        { n: "Augmentine", p: "Amoxicilina/Clavulánico", u: "Antibiótico", c: "Infecciones diversas" },
+        { n: "Trankimazin", p: "Alprazolam", u: "Benzodiacepina rápida", c: "Crisis ansiedad aguda" },
+        { n: "Primperan", p: "Metoclopramida", u: "Antiemético", c: "Vómitos y náuseas" },
+        { n: "Zofran", p: "Ondansetrón", u: "Antiemético", c: "Vómitos incoercibles" },
+        { n: "Adrenalina", p: "Epinefrina", u: "Simpaticomimético", c: "Parada cardiaca, anafilaxia" },
+        { n: "Metformina", p: "Metformina", u: "Antidiabético", c: "Diabetes Tipo 2" },
+        { n: "Lantus", p: "Insulina Glargina", u: "Insulina lenta", c: "Diabetes insulinodependiente" },
+        { n: "Atrovent", p: "Ipratropio", u: "Broncodilatador", c: "EPOC" },
+        { n: "Aspirina", p: "Ácido acetilsalicílico", u: "Analgésico / Antiagregante", c: "Dolor / Prevención vascular" },
+        { n: "Codeína", p: "Codeína", u: "Opioide débil / Antitusivo", c: "Dolor o tos seca" },
+        { n: "Naproxeno", p: "Naproxeno", u: "AINE vida media larga", c: "Dolor articular, reglas" },
+        { n: "Pantoprazol", p: "Pantoprazol", u: "Protector gástrico", c: "Gastritis, reflujo GE" },
+        { n: "Bisoprolol", p: "Bisoprolol", u: "Betabloqueante", c: "Insuficiencia cardíaca" },
+        { n: "Amlodipino", p: "Amlodipino", u: "Calcioantagonista", c: "Hipertensión arterial" },
+        { n: "Atorvastatina", p: "Atorvastatina", u: "Estatina", c: "Colesterol alto" },
+        { n: "Simvastatina", p: "Simvastatina", u: "Estatina", c: "Colesterol alto" },
+        { n: "Xarelto", p: "Rivaroxabán", u: "Anticoagulante oral", c: "Prevención ictus, TVP" },
+        { n: "Pulmicort", p: "Budesonida", u: "Corticoide inhalado", c: "Asma/EPOC" },
+        { n: "Symbicort", p: "Budesonida + Formoterol", u: "Terapia combinada", c: "Mantenimiento EPOC/Asma" },
+        { n: "Lexatin", p: "Bromazepam", u: "Ansiolítico suave", c: "Ansiedad leve" },
+        { n: "Stilnox", p: "Zolpidem", u: "Hipnótico", c: "Insomnio" },
+        { n: "Sertralina", p: "Sertralina", u: "Antidepresivo ISRS", c: "Depresión, ansiedad" },
+        { n: "Fluoxetina", p: "Fluoxetina", u: "Antidepresivo ISRS", c: "Depresión, bulimia" },
+        { n: "Azitromicina", p: "Azitromicina", u: "Antibiótico Macrólido", c: "Infecciones garganta/respiratorias" },
+        { n: "Ciprofloxacino", p: "Ciprofloxacino", u: "Antibiótico Quinolona", c: "Infecciones orina/digestivas" },
+        { n: "Monurol", p: "Fosfomicina", u: "Antibiótico", c: "Infección de orina" },
+        { n: "Ozempic", p: "Semaglutida", u: "Análogo GLP-1", c: "Diabetes T2 / Obesidad" },
+        { n: "Gelocatil", p: "Paracetamol", u: "Analgésico y antipirético", c: "Dolor leve o moderado y estados febriles" },
+        { n: "Polaramine", p: "Dexclorfeniramina", u: "Antihistamínico", c: "Alergias cutáneas" }
+    ];
+
+    function buscar() {
+        const input = document.getElementById("searchInput").value.toLowerCase();
+        const display = document.getElementById("results");
+        display.innerHTML = "";
+
+        if (input.trim() === "") return;
+
+        // Limpiar acentos
+        const inputLimpio = input.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        const resultados = db.filter(item => {
+            const n = item.n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const p = item.p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return n.includes(inputLimpio) || p.includes(inputLimpio);
+        });
+
+        if (resultados.length === 0) {
+            display.innerHTML = "<div class='no-results'>⚠ No se encontraron coincidencias.</div>";
+        } else {
+            resultados.forEach(med => {
+                display.innerHTML += `
+                    <div class="card">
+                        <h2>${med.n}</h2>
+                        <div class="info-block">
+                            <span class="label">Principio Activo</span>
+                            <span class="value">${med.p}</span>
+                        </div>
+                        <div class="info-block">
+                            <span class="label">Uso / Función</span>
+                            <span class="value">${med.u}</span>
+                        </div>
+                        <div class="info-block">
+                            <span class="label">Paciente TES</span>
+                            <span class="value">${med.c}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    // Enter para buscar
+    document.getElementById("searchInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") buscar();
+    });
+</script>
+
+</body>
+</html>
